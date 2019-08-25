@@ -603,8 +603,6 @@ draw_models(variables_dir["nao_pattern_djf"].values(), variables_dir["nao_patter
 
 ### ----- draw all models along with their ensemble means ----- ###
 
-### UPDATE HÄR - skriv denna som funktion eller lägg till "mean" i funktionen identify_ensemble_members(exp)
-
 for exp in experiments:
     print(exp)
     means_list1 = []
@@ -651,7 +649,7 @@ def calculate_means(list_of_numbers):
 # In[10]:
 
 
-def identify_ensemble_means(exp, variable, specific_exp="all"):  ## istället för specific_exp --> namn på experiment
+def identify_ensemble_means(exp, variable, specific_exp="all"):
 
     path = "/Users/venniarra/Desktop/jupyter-notebook/test2"
     
@@ -753,7 +751,7 @@ draw_models(all_means_nao.values(), all_means_nao.keys(), "nao_all_means", lons,
 # In[11]:
 
 
-def identify_CMIP_ensemble_means(models, variable, name, specific_exp="all"):  ## istället för specific_exp --> namn på experiment
+def identify_CMIP_ensemble_means(models, variable, name, specific_exp="all"): 
 
     path = "/Users/venniarra/Desktop/jupyter-notebook/test2"
     model_list = []
@@ -1686,7 +1684,6 @@ for a in experiments:
 
     ensembles_means = []
     
-    print("MOIMOIMOMOIMOIMOIMOIM")
 
     for time_period in variables_dir:
         
@@ -1711,118 +1708,7 @@ draw_models(a[2], experiments, "tas_all", lons, lats, 1, 4, min_val=-15, max_val
 draw_models(a[3], experiments, "pr_all", lons, lats, 1, 4, min_val=-2,max_val=2)
 
 
-# # scatter plots
-
-# In[20]:
-
-
-ipcc_dataset = xr.open_dataset('ipcc_region_array-2.nc')
-ipcc = ipcc_dataset.variables["ipcc_region_array"]
-
-
-#Populate some dictionaries for searching over
-ts_dict={}
-for i in range(ipcc.sizes['timeseries_id']):
-        ts_dict[ipcc_dataset['timeseries'].data[i]]=ipcc_dataset['timeseries_id'].data[i]
-gcm_dict={}
-for i in range(ipcc.sizes['model_id']):
-        gcm_dict[ipcc_dataset['models'].data[i]]=ipcc_dataset['model_id'].data[i]
-expt_dict={}
-for i in range(ipcc.sizes['expt_id']):
-        expt_dict[ipcc_dataset['expts'].data[i]]=ipcc_dataset['expt_id'].data[i]
-print(gcm_dict)
-
-
-# In[21]:
-
-
-print(ipcc[:].dims)
-
-
-# In[40]:
-
-
-#Try loading in some sample data
-x_variable="ipcc_NEU_pr"
-y_variable="nao_pattern_djf"
-x_var_is_stddev=False
-y_var_is_stddev=False
-
-piCtl=ipcc[:,0,ts_dict[x_variable],x_var_is_stddev].data
-others=ipcc[:,:,ts_dict[x_variable],x_var_is_stddev].data
-print(others[:,2])
-print(others[:,5])
-x=others.T-piCtl.T
-x.shape
-
-piCtl=ipcc[:,0,ts_dict[y_variable],y_var_is_stddev].data
-others=ipcc[:,:,ts_dict[y_variable],y_var_is_stddev].data
-print(others[:,2])
-print(others[:,5])
-y=others.T-piCtl.T
-y.shape
-
-
-# In[41]:
-
-
-colors = ['black','darkgreen','blue','lime','darkgreen','blue','lime','red','maroon','goldenrod','darkorange']
-markers = ['o','+','+','+','o','o','o','o','o','o','o']
-
-#Plot with lig for this one...
-for expt in ipcc_dataset['expt_id'].data[1:]:
-    this_label=ipcc_dataset['expts'].data[expt]
-    #if this_label.startswith('lig') != True: 
-    plt.scatter(x[expt,:], y[expt,:], color=colors[expt],marker=markers[expt],label=this_label)
-    
-plt.xlabel("mean "+x_variable)
-plt.ylabel("Mean "+y_variable)
-plt.legend(loc='best')
-
-
-# In[42]:
-
-
-modes_dataset = xr.open_dataset("modes_array.nc")
-modes=modes_dataset.modes_array
-print(modes_dataset)
-#Populate some dictionaries for searching over
-mode_dict={}
-for i in range(modes_dataset.sizes['modes_id']):
-        mode_dict[modes_dataset['modenames'].data[i]]=modes_dataset['modes_id'].data[i]
-print(mode_dict)
-
-
-# In[137]:
-
-
-y_variable="nao_pattern_djf"
-piCtl=modes[:,0,mode_dict[y_variable]].data
-others=modes[:,:,mode_dict[y_variable]].data
-print(others[:,2])
-print(others[:,5])
-y=others.T/piCtl.T
-y.shape
-
-
-# In[24]:
-
-
-colors = ['black','darkgreen','blue','lime','darkgreen','blue','lime','red','maroon','goldenrod','darkorange']
-markers = ['o','+','+','+','o','o','o','o','o','o','o']
-
-#Plot with lig for this one...
-for expt in ipcc_dataset['expt_id'].data[1:]:
-    this_label=ipcc_dataset['expts'].data[expt]
-    if this_label.startswith('lig') != True: 
-        plt.scatter(x[expt,:], y[expt,:], color=colors[expt],marker=markers[expt],label=this_label)
-    
-plt.xlabel("mean "+x_variable)
-plt.ylabel(y_variable+" Amplitude Change")
-plt.legend(loc='best')
-
-
-# # standard deviations for each nao_pattern in each model and each experiment - then, ensemble mean of all the std together
+# standard deviations for each nao_pattern in each model and each experiment - then, ensemble mean of all the std together
 
 # In[228]:
 
@@ -2054,12 +1940,8 @@ print(a[0].keys())
 #make function (changing x-axis values)
 
 colors = ['black','darkgreen','blue','lime','darkgreen','blue','lime','red','maroon','goldenrod','darkorange']
-markers = ['o','+','+','+','o','o','o','o','o','o','o']
+markers = ['o','o','o','o','o','o','o','o','o','o','o']
 
-"""#Plot with lig for this one...
-for expt in ipcc_dataset['expt_id'].data[1:]:
-this_label=ipcc_dataset['expts'].data[expt]
-#if this_label.startswith('lig') != True"""
 i=0
 for b in a[0].keys():
     if "piControl" not in b:
@@ -2068,58 +1950,6 @@ for b in a[0].keys():
         plt.ylabel("nao_amplitude")
         plt.legend(loc='best')
         i=i+1
-
-
-# In[ ]:
-
-
-
-        
-    """ tas_NEU = regrid_models[model][exp].variables.get("tas_spatialmean_djf")[19:39,170:215]
-            pr_NEU = regrid_models[model][exp].variables.get("pr_timeseries_djf")[19:39,170:215]
-            tas_MED = regrid_models[model][exp].variables.get("tas_spatialmean_djf")[39:59,170:215]
-            pr_MED = regrid_models[model][exp].variables.get("pr_timeseries_djf")[39:59,170:215]
-            if var == "tas_spatialmean_djf"
-            if var == "pr_spatialmean_djf"
-            
-        
-        # Y-AXIS
-        for mod3, mod4 in zip(pattern_dir["nao_pattern_djf"].keys(),time_dir["nao_timeseries_djf"].keys()):   # the leading spatial pattern is standardized by its respective spatial standard deviation
-            nao = variables_dir["nao_pattern_djf"][mod3][9:69,90:220] #[110:170,90:220] - remember changing this depending on the reverse_data
-            nao_time = timeseries_dir["nao_timeseries_djf"][mod4]
-            nao_std = np.nanstd(nao)
-            new_nao_time = nao_time*nao_std
-            std_nao_time = np.nanstd(new_nao_time)
-            
-            # add: std for each experiment minus std pi and then append to directory keyed to variable (when calling variable, all models will appear)
-
-        # X-AXIS (changeble)
-        for mod5, mod6 in zip(climatology_tas_dir["tas_spatialmean_djf"].keys, climatology_pr_dir["pr_spatialmean_djf"].keys):
-            
-            ### NORTH ###
-            temperature_NEU = climatology_tas_dir["tas_spatialmean_djf"][mod5][19:39,170:215]
-            mean_temp_NEU = np.nanmean(temperature_NEU)
-            # add: each experiment - pi and append to directory keyed to variable (when calling variable, all models will appear)
-            #y_axis.append()
-
-            precipitation_NEU = climatology_pr_dir["pr_spatialmean_djf"][mod5][19:39,170:215]
-            mean_pr_NEU = np.nanmean(precipitation_NEU)
-            # add: each experiment - pi and append to directory keyed to variable (when calling variable, all models will appear)
-            #y_axis.append()
-
-            ### SOUTH ###
-            temperature_MED = climatology_tas_dir["tas_spatialmean_djf"][mod5][39:59,170:215]
-            mean_temp_MED = np.nanmean(temperature_MED)
-            # add: each experiment - pi and append to directory keyed to variable (when calling variable, all models will appear)
-            #y_axis.append()
-
-            precipitation_MED = climatology_pr_dir["pr_spatialmean_djf"][mod5][39:59,170:215]
-            # add: each experiment - pi and append to directory keyed to variable (when calling variable, all models will appear)
-            mean_pr_MED = np.nanmean(precipitation_MED)
-            
-            #y_axis.append()
-        
-    return   """
 
 
 # In[ ]:
@@ -2194,26 +2024,6 @@ draw_models_one([C20_nao_10], [" "], "DELETE", lons, lats, 1, 1, -5,5)
 timeseries_dir["nao_timeseries_djf"]
 #nao_time = timeseries_dir["nao_timeseries_djf"][mod]
 #print(nao_time)
-
-
-# # % of positive NAO seasons in time series
-
-# In[8]:
-
-
-for exp in experiments:
-    print(exp)
-    timeseries_dir = identify_ensemble_members(exp, "nao_timeseries_djf", True,False)
-    
-    for mod in timeseries_dir["nao_timeseries_djf"].keys():
-            print("\t",mod)
-            nao_time = timeseries_dir["nao_timeseries_djf"][mod]
-            positive = nao_time>0 # how many years are positive?
-            percentage = positive.sum()/len(nao_time)*100
-            print("\t",percentage)
-
-
-# In[ ]:
 
 
 
