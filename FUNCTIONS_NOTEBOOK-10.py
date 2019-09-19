@@ -33,74 +33,21 @@ warnings.filterwarnings("ignore")
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 
-# # plot C20 Reanalysis
-
-# In[94]:
-
-
-# UPDATE FIG 7
-
-# import file
-C20 = xr.open_dataset('test2/C20-Reanalysis.cvdp_data.1871-2012_corr2.nc', decode_times=False)
-
-# select variable
-C20_nao = C20.variables["nao_pattern_djf"][:]
-C20_psl = C20.variables["psl_spatialmean_djf"][:]
-C20_tas = C20.variables["tas_spatialmean_djf"][:]
-C20_pr = C20.variables["pr_spatialmean_djf"][:]
-
-# select grid
-grid_out = xe.util.grid_global(1,1)
-
-# create grid
-regridder_M1 = xe.Regridder(C20, grid_out, 'nearest_s2d', reuse_weights=False)
-
-# use new grid
-C20_nao_1 = regridder_M1(C20_nao.values)
-C20_psl_2 = regridder_M1(C20_psl.values)
-C20_tas_3 = regridder_M1(C20_tas.values)
-C20_pr_4 = regridder_M1(C20_pr.values)
-
-list_11 = [C20_nao_1, C20_psl_2, C20_tas_3, C20_pr_4]
-names_11 = ["C20_nao_1", "C20_psl_2", "C20_tas_3", "C20_pr_4"]
-
-
-#draw_models([C20_nao_1], [" "], "C20_reanalysis_nao", lons, lats, 1, 1, -5,5)
-#draw_models([C20_tas_3], [" "], "C20_reanalysis_tas", lons, lats, 1, 1, -35,35) # coolwarm
-draw_models([C20_pr_4], [" "], "C20_reanalysis_pr", lons, lats, 1, 1, 0,8)
-
-
-# # name lists + lats and lons
-
-# In[8]:
-
+# experiment name list + latitudes and longitudes
 
 """lists"""
 experiments = ["lig127k", "lgm", "midHolocene", "piControl", "1pctCO2"] #
 
 
 """lats and lons needed for plotting"""
-
 lats= np.arange(-90,90,1)
 lons= np.arange(-180,180,1)
 
+""" letters list for multiplots (uncomment if needed) """
+letters = ["a)","b)","c)","d)","e)","f)","g)","h)","i)","j)","k)",
+           #"l)","m)","n)","o)","p)","q)","r)","s)","t)","u)"]
 
-# # correct inversed models
-
-# In[3]:
-
-
-"""inverse latitudes in models that are wrong"""
-
-"""def reverse_data(data, file):
-        if False: #"AWI-ESM_" in file: #or "MPI-ESM-P" in file:     # add: or "file_name" in file for other models with same problem
-        data = data[::-1,:]
-        print("PLAPLAPLAPLAPLAPLAPL")
-    return data"""
-
-
-# In[14]:
-
+# correct inversed models
 
 """inverse all models for std calculation"""
 
@@ -110,158 +57,48 @@ def reverse_data(data, file):
     return data
 
 
-# # FUNCTION: draw models
+# FUNCTION 1: DRAW MODELS
 
-# In[182]:
-
-
-""" draw models """
-# ACCORDING TO NEED:
-# CMAP -->
-# nao = bwr
-# psl =
-# tas = PuOr instead of Spectral
-# pr = BrBG
-# psl = RdBu
-# figsize: 15,9, lig alone 15,4
-
-#letters = ["a)","b)","c)","d)","e)","f)","g)","h)","i)","j)","k)",
-           #"l)","m)","n)","o)","p)","q)","r)","s)","t)","u)"] # FOR MULTIPLOTS
-
-#letters = ["i)","j)","k)","l)"] # FOR SINGLE PLOTS
-
+""" function for multiplots """
 def draw_models(models, names, name_out, lons, lats, rows, cols, min_val=0, max_val=0):
     
     if(min_val == 0 and max_val == 0):   # if min and max values are not defined when calling on function, find model's min + max
-        print("su")
-        old_max=-999999
-        old_min=999999
+        old_max = -999999
+        old_min = 999999
         for model in models:
             for a in model:
-                new_min=min(a)
-                new_max=max(a)
-                if old_min>new_min:
-                    old_min=new_min
-                if old_max<new_max:
-                    old_max=new_max
+                new_min = min(a)
+                new_max = max(a)
+                if old_min > new_min:
+                    old_min = new_min
+                if old_max < new_max:
+                    old_max = new_max
     else:
-        old_max=max_val
-        old_min=min_val
-        
-    
-    fig = plt.figure(figsize=(15, 10), dpi=100) # one_plot=15,4 or 5, multiplot=15,10 
+        old_max = max_val
+        old_min = min_val
+           
+    fig = plt.figure(figsize=(15, 10), dpi=100) # one_plot=15,4 multiplot=15,10 
     levelArray = []
-    levelArray = np.linspace(min_val,max_val,29) # set this manually - note necessarily linspace!! do not include 0 in colourbar
-    proj  =  ccrs.PlateCarree() # or ccrs.Orthographic(central_longitude=0, central_latitude=90, globe=None) # ccrs.PlateCarree() 
-    plt.gcf().subplots_adjust(hspace=0.2, wspace=0.05, top=0.95, bottom=0.05, left=0.075, right=0.925) # (hspace=0.2, wspace=0.05, top=0.95, bottom=0.05, left=0.075, right=0.925), one plot: bottom=0.15
-    print("hello")
+    levelArray = np.linspace(min_val,max_val,29) # set this manually if needed
+    proj  =  ccrs.PlateCarree() # or ccrs.Orthographic(central_longitude=0, central_latitude=90, globe=None)
+    plt.gcf().subplots_adjust(hspace=0.2, wspace=0.05, top=0.95, bottom=0.05, left=0.075, right=0.925) # for one plot: bottom=0.15
     
     i=1
-    for model, name, num in zip(models, names, range(len(models))): # letter, letters
-        ax = fig.add_subplot(rows, cols, i, projection=proj) # ccrs.Orthographic(0,90) OR ccrs.PlateCarree(central_longitude=0)
-        ax.set_extent([-100,30,0,80], proj) #[-100,30,0,80] [-25, 50, 25, 75]
+    for model, name, num in zip(models, names, range(len(models))): # include "letters" list if needed for multiplots
+        ax = fig.add_subplot(rows, cols, i, projection=proj)
+        ax.set_extent([-100,30,0,80], proj) # change according to study region
         im = plt.contourf(lons, lats, model[:], transform=proj, vmin=old_min, vmax=old_max, extend="both",
-                          cmap=mpl_cm.bwr, levels=levelArray) #pcolormesh
+                          cmap=mpl_cm.bwr, levels=levelArray) # or use pcolormesh
         
-        #im = plt.contour(im:colors="k")
-        
-        # USE ONLY FOR SINGLE PLOTS OTHERWISE COMMENT
-        """gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True)
-        gl.xlabels_top = False
-        gl.xlabels_bottom = False
-        gl.ylabels_right = False
-        gl.xlines = False
-        gl.ylines = False
-        gl.ylocator = mticker.FixedLocator([20, 60, 80])
-        gl.xformatter = LONGITUDE_FORMATTER
-        gl.yformatter = LATITUDE_FORMATTER
-        gl.ylabel_style = {'size': 12, 'color': 'black'}"""
-        
-        #plt.title(letter, loc='left', fontweight='bold', fontsize=15)
-        plt.title(name, loc='center', fontsize='large') # size 16 for discussion plots
-        plt.gca().coastlines()
-        colorbar = fig.colorbar(im, ax=ax, cax=fig.add_axes([0.27,0.13,0.65,0.02]),
-                     orientation='horizontal', format='%.0f') #CHANGE 0f om inga decimaler, #cax = [left, bottom, width, height][[0.15,0.0,0.70,0.03]], one plot= [0.27,0.0,0.46,0.03]
-        colorbar.ax.xaxis.set_label_position('top')
-        colorbar.ax.set_xlabel("hPa", fontsize=15) # CHANGE ACCORDINGLY °C/σ
-        i=i+1
-        
-    
-    plt.savefig(name_out+".png", bbox_inches="tight")
-
-
-# In[54]:
-
-
-""" draw models """
-# ACCORDING TO NEED:
-# CMAP -->
-# nao = bwr
-# tas = PuOr instead of Spectral
-# pr = BrBG
-# psl = RdBu
-# figsize: 15,9, lig alone 15,4
-
-
-letters = [" "]
-
-def draw_models_one(models, names, name_out, lons, lats, rows, cols, min_val=0, max_val=0):
-    
-    if(min_val == 0 and max_val == 0):   # if min and max values are not defined when calling on function, find model's min + max
-        print("su")
-        old_max=-999999
-        old_min=999999
-        for model in models:
-            for a in model:
-                new_min=min(a)
-                new_max=max(a)
-                if old_min>new_min:
-                    old_min=new_min
-                if old_max<new_max:
-                    old_max=new_max
-    else:
-        old_max=max_val
-        old_min=min_val
-        
-    
-    fig = plt.figure(figsize=(15, 5), dpi=100) # one_plot=15,4 or 5
-    levelArray = []
-    levelArray = np.linspace(min_val,max_val,29) # set this manually - note necessarily linspace!! do not include 0 in colourbar
-    proj  =  ccrs.PlateCarree() # or ccrs.Orthographic(central_longitude=0, central_latitude=90, globe=None) # ccrs.PlateCarree() 
-    plt.gcf().subplots_adjust(hspace=0.2, wspace=0.05, top=0.95, bottom=0.07, left=0.075, right=0.925) # (hspace=0.2, wspace=0.05, top=0.95, bottom=0.05, left=0.075, right=0.925), one plot: bottom=0.15
-    print("hello")
-    
-    i=1
-    for model, name, letter, num in zip(models, names, letters, range(len(models))):
-        ax = fig.add_subplot(rows, cols, i, projection=proj) # ccrs.Orthographic(0,90) OR ccrs.PlateCarree(central_longitude=0)
-        ax.set_extent([-15,35,30,50], proj) #[-100,30,0,80] [-25,50,25,75] NEU: [-15,35,50,70], MED: [-15,35,30,50]
-        im = plt.contourf(lons, lats, model[:], transform=proj, vmin=old_min, vmax=old_max, extend="both",
-                          cmap=mpl_cm.bwr, levels=levelArray) #pcolormesh
-        
-        #im = plt.contour(im:colors="k")
-        
-        # USE ONLY FOR SINGLE PLOTS OTHERWISE COMMENT
-        """gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True)
-        gl.xlabels_top = False
-        gl.xlabels_bottom = False
-        gl.ylabels_right = False
-        gl.xlines = False
-        gl.ylines = False
-        gl.ylocator = mticker.FixedLocator([20, 60, 80])
-        gl.xformatter = LONGITUDE_FORMATTER
-        gl.yformatter = LATITUDE_FORMATTER
-        gl.ylabel_style = {'size': 12, 'color': 'black'}"""
-        
-        plt.title(letter, loc='left', fontweight='bold', fontsize=15)
+        #plt.title(letter, loc='left', fontweight='bold', fontsize=15) # uncomment if using letter list for multiplots
         plt.title(name, loc='center', fontsize='large')
         plt.gca().coastlines()
-        colorbar = fig.colorbar(im, ax=ax, cax=fig.add_axes([0.15,0.0,0.70,0.02]),
-                     orientation='horizontal', format='%.1f') #CHANGE 0f om inga decimaler, #cax = [left, bottom, width, height][[0.15,0.0,0.70,0.03]], one plot= [0.27,0.0,0.46,0.03]
+        colorbar = fig.colorbar(im, ax=ax, cax=fig.add_axes([0.27,0.13,0.65,0.02]), # [left, bottom, width, height]
+                     orientation='horizontal', format='%.0f') # format= 0f or 1f (one decimal)
         colorbar.ax.xaxis.set_label_position('top')
-        colorbar.ax.set_xlabel("hPa", fontsize=15) # CHANGE ACCORDINGLY °C/σ
+        colorbar.ax.set_xlabel("hPa", fontsize=15) # change accordingly
         i=i+1
-        
-    
+ 
     plt.savefig(name_out+".png", bbox_inches="tight")
 
 
