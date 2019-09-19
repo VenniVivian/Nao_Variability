@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
 import matplotlib.pyplot as plt
 import xarray as xr
 import numpy as np
@@ -33,33 +30,35 @@ warnings.filterwarnings("ignore")
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 
-# experiment name list + latitudes and longitudes
 
-"""lists"""
+### EXPERIMENT NAME LIST + LATS AND LONS ###
+
+#lists
 experiments = ["lig127k", "lgm", "midHolocene", "piControl", "1pctCO2"] #
 
-
-"""lats and lons needed for plotting"""
+#lats and lons needed for plotting
 lats= np.arange(-90,90,1)
 lons= np.arange(-180,180,1)
 
-""" letters list for multiplots (uncomment if needed) """
+#letters list for multiplots
 letters = ["a)","b)","c)","d)","e)","f)","g)","h)","i)","j)","k)",
-           #"l)","m)","n)","o)","p)","q)","r)","s)","t)","u)"]
+           "l)","m)","n)","o)","p)","q)","r)","s)","t)","u)"]
 
-# correct inversed models
 
-"""inverse all models for std calculation"""
 
+### CORRECT INVERSED MODELS ###
+
+# inverse all models for spatial standard deviation calculation
 def reverse_data(data, file):
     if "nc" in file:
         data = data[::-1,:]
     return data
 
 
-# FUNCTION 1: DRAW MODELS
 
-""" function for multiplots """
+### FUNCTION 1: DRAW MODELS ###
+
+# function for multiplots
 def draw_models(models, names, name_out, lons, lats, rows, cols, min_val=0, max_val=0):
     
     if(min_val == 0 and max_val == 0):   # if min and max values are not defined when calling on function, find model's min + max
@@ -102,41 +101,44 @@ def draw_models(models, names, name_out, lons, lats, rows, cols, min_val=0, max_
     plt.savefig(name_out+".png", bbox_inches="tight")
 
 
-# # FUNCTION: model evaluation: identify difference field between C20 and each model in piControl
 
-# In[7]:
-
-
-""" identify difference field for model evaluation - between C20 and each model in PiControl"""
+### FUNCTION 2: model evaluation - identify difference field between C20 Reanalysis and each model in piControl ###
 
 def identify_difference_field(exp_name, not_regression=True):
-
+          
+    # open reanalysis dataset
     C20 = xr.open_dataset('test2/C20-Reanalysis.cvdp_data.1871-2012_corr2.nc', decode_times=False)
     
+    # path to files
     path = "/Users/venniarra/Desktop/jupyter-notebook/test2"
     
+    # create directories
     var_dir = {}
-    # r=root, d=directories, f = files
     nao= {}
     tas= {}
     pr= {}
     nao_tas = {}
     nao_pr = {}
     
+    # define 1x1 grid for regridding 
     grid_out = xe.util.grid_global(1,1)
     
+    # create regridder
     regridder = xe.Regridder(C20, grid_out, 'nearest_s2d', reuse_weights=False) # remember to change to False
     
+    # regrid variables
     C20_nao = regridder(C20.variables.get("nao_pattern_djf").values)
     C20_tas = regridder(C20.variables.get("tas_spatialmean_djf").values)
     C20_pr = regridder(C20.variables.get("pr_spatialmean_djf").values)
     C20_nao_tas = regridder(C20.variables.get("nao_tas_regression_djf").values)
     C20_nao_pr = regridder(C20.variables.get("nao_pr_regression_djf").values)
     
+    # open all files with the exp_name, regrid and get model name 
+    # r=root, d=directories, f = files
     for r, d, f in os.walk(path):
         for file in f:
             if exp_name in file:
-                pathtofile=os.path.join(r, file)
+                pathtofile = os.path.join(r, file)
                
                 open_file = xr.open_dataset(pathtofile, decode_times=False)
                 
@@ -148,11 +150,10 @@ def identify_difference_field(exp_name, not_regression=True):
                 
                 pathtofile = pathtofile.replace("_", " ")
                 
-                #print(pathtofile)
-                
+                # subtract the C20 reanalysis from each model for a specific variable
                 if not_regression:
                     
-                    temp = open_file.variables.get("nao_pattern_djf") # THIS ONE NOT NECESSARILY NEEDED (DEPENDS)
+                    temp = open_file.variables.get("nao_pattern_djf")
                     if temp is not None:
                         data = regridder(open_file.variables.get("nao_pattern_djf").values)-C20_nao
                         data = reverse_data(data, file)
@@ -183,7 +184,7 @@ def identify_difference_field(exp_name, not_regression=True):
                         data = regridder(open_file.variables.get("nao_pr_regression_djf").values)-C20_nao_pr
                         data = reverse_data(data, file)
                         nao_pr[pathtofile] = data
-     
+    # add in directory
     if not_regression:
         var_dir["nao_pattern_djf"]=nao
         var_dir["tas_spatialmean_djf"]=tas
@@ -197,13 +198,9 @@ def identify_difference_field(exp_name, not_regression=True):
     
     return var_dir
 
-# add if clause for models with "error"
 
 
-# In[41]:
-
-
-### model evaluation plots ###
+### MODEL EVALUATION PLOTS ###
 
 variables_dir = identify_difference_field("piControl")
 draw_models(variables_dir["nao_pattern_djf"].values(), variables_dir["nao_pattern_djf"].keys(), "nao_mod_evaluation", lons, lats, 5, 5, -1, 2)
@@ -211,23 +208,13 @@ draw_models(variables_dir["nao_pattern_djf"].values(), variables_dir["nao_patter
 #draw_models(variables_dir["pr_spatialmean_djf"].values(), variables_dir["pr_spatialmean_djf"].keys(), "pr_mod_evaluation", lons, lats, 5, 5, -7, 8)
 
 
-# In[34]:
 
+### REGRESSION EVALUATION PLOTS ###
 
-draw_models(variables_dir["nao_pattern_djf"].values(), variables_dir["nao_pattern_djf"].keys(), "nao_mod_evaluation", lons, lats, 5, 5, -1, 2)
-
-
-# In[119]:
-
-
-### regression evaluation plots ###
 variables_dir = identify_difference_field("piControl", False)
-
 draw_models(variables_dir["nao_tas_regression_djf"].values(), variables_dir["nao_tas_regression_djf"].keys(), "nao_tas_mod_evaluation", lons, lats, 5, 5,-1,2)
-draw_models(variables_dir["nao_pr_regression_djf"].values(), variables_dir["nao_pr_regression_djf"].keys(), "nao_pr_mod_evaluation", lons, lats, 5, 5,-1,1)
+#draw_models(variables_dir["nao_pr_regression_djf"].values(), variables_dir["nao_pr_regression_djf"].keys(), "nao_pr_mod_evaluation", lons, lats, 5, 5,-1,1)
 
-
-# In[97]:
 
 
 ### NORMAL model evaluation with ensemble means ###
