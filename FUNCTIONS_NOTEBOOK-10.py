@@ -123,7 +123,7 @@ def identify_difference_field(exp_name, not_regression=True):
     # define 1x1 grid for regridding 
     grid_out = xe.util.grid_global(1,1)
     
-    # create regridder
+    # create regridder for C20 reanalysis
     regridder = xe.Regridder(C20, grid_out, 'nearest_s2d', reuse_weights=False) # remember to change to False
     
     # regrid variables
@@ -217,79 +217,40 @@ draw_models(variables_dir["nao_tas_regression_djf"].values(), variables_dir["nao
 
 
 
-### NORMAL model evaluation with ensemble means ###
+### CREATE ENSEMBLE MEANS FOR MODEL EVALUATION ###
 
+# create lists
 means_list2 = []
 keys_list1 = []
 difference_dir = identify_difference_field("piControl")
 
-#print(difference_dir)
-
 for var in difference_dir:
-    #print(difference_dir[var].values())
     time_period_np = list(difference_dir[var].values())
     time_period_mean = np.nanmean(time_period_np, axis=0)
-    #print(time_period_mean.shape)
     time_period_np.append(time_period_mean)
-    #np.append(time_period_np, [time_period_mean], axis=0)
     keys = list(difference_dir[var].keys())
-    #print(keys)
-    keys.append("Ensemble Mean") #var+" mean"
+    keys.append("Ensemble Mean")
 
     means_list2.append(time_period_np)
     keys_list1.append(keys)
 
 
-# In[114]:
+### DRAW MODELS AND ENSEMBLE MEAN FOR MODEL EVALUATION ###
 
-
-# draw above cell
-
-#draw_models(means_list2[0], keys_list1[0], "nao_mod_evaluation_ens", lons, lats, 5, 5, min_val=-3.5, max_val=3.5)
+draw_models(means_list2[0], keys_list1[0], "nao_mod_evaluation_ens", lons, lats, 5, 5, min_val=-3.5, max_val=3.5)
 #draw_models(means_list2[1], keys_list1[1], "tas_mod_evaluation_ens", lons, lats, 5, 5, min_val=-8.2, max_val=8.2)
-draw_models(means_list2[2], keys_list1[2], "pr_mod_evaluation_ens", lons, lats, 5, 5, min_val=-4.7, max_val=4.7)
+#draw_models(means_list2[2], keys_list1[2], "pr_mod_evaluation_ens", lons, lats, 5, 5, min_val=-4.7, max_val=4.7)
 
 
-# In[11]:
 
-
-### REGRESSION model evaluation with ensemble means ###
-
-means_list2 = []
-keys_list1 = []
-difference_dir = identify_difference_field("piControl", False)
-
-for var in difference_dir:  
-    time_period_np = list(difference_dir[var].values())
-    time_period_mean = np.nanmean(time_period_np, axis=0)
-    #print(time_period_mean.shape)
-    time_period_np.append(time_period_mean)
-    #np.append(time_period_np, [time_period_mean], axis=0)
-    keys = list(difference_dir[var].keys())
-    #print(keys)
-    keys.append(var+" mean")
-
-    means_list2.append(time_period_np)
-    keys_list1.append(keys)
-        
-
-draw_models(means_list2[0], keys_list1[0], "nao_tas_mod_evaluation_ens", lons, lats, 5, 5, min_val=-1, max_val=2)
-draw_models(means_list2[1], keys_list1[1], "nao_pr_mod_evaluation_ens", lons, lats, 5, 5, min_val=-0.5, max_val=0.6)
-
-
-# # FUNCTION: identify all models for all experiments and variables
-
-# In[11]:
-
-
-"""identify all models for each time period and each variable""" 
+### FUNCTION 3: identify all models for all experiments and variables ###
 
 def identify_ensemble_members(exp_name, variable="all", not_regression=True, not_timeseries=True):
 
     path = "/Users/venniarra/Desktop/jupyter-notebook/test2"
     
+    # create dictionaries
     var_dir = {}
-    # r = root, d = directories, f = files
     nao= {}
     psl= {}
     pr= {}
@@ -297,9 +258,12 @@ def identify_ensemble_members(exp_name, variable="all", not_regression=True, not
     nao_pr = {}
     nao_tas = {}
     nao_time = {}
-    
+
+    # define 1x1 grid for regridding 
     grid_out = xe.util.grid_global(1,1)
     
+    # open all files with the exp_name, regrid and get model name 
+    # r = root, d = directories, f = files
     for r, d, f in os.walk(path):
         for file in f:
             if exp_name in file:
@@ -314,17 +278,13 @@ def identify_ensemble_members(exp_name, variable="all", not_regression=True, not
                 
                 pathtofile = pathtofile[1:-5]
                 
-                #pathtofile = pathtofile.replace("_", " ")
-                
-                print(pathtofile)
-                
                 if not_regression and not_timeseries:
                     if variable == "nao_pattern_djf" or variable == "all":
                         temp = open_file.variables.get("nao_pattern_djf")
                         if temp is not None:
-                            percent = open_file.variables.get("nao_pattern_djf").attrs["pcvar"][:-1]
+                            percent = open_file.variables.get("nao_pattern_djf").attrs["pcvar"][:-1] # get the percentage of explained variance for NAO
                             data = regridder(open_file.variables.get("nao_pattern_djf").values)
-                            data = reverse_data(data, file)
+                            data = reverse_data(data, file) # not necessarily needed - plot data to see if data inversed
                             nao[pathtofile+"    "+percent] = data
                             
                     if variable == "psl_spatialmean_djf" or variable == "all":
@@ -389,46 +349,22 @@ def identify_ensemble_members(exp_name, variable="all", not_regression=True, not
     return var_dir
 
 
-# In[8]:
 
-
-### ------ draw all models in each time period and all variables ------- ###
+### PLOT ALL MODELS IN EACH EXPERIMENT AND EACH VARIABLE ###
 
 for a in experiments:
     print("\t",a)
     variables_dir = identify_ensemble_members(a)
-    draw_models(variables_dir["nao_pattern_djf"].values(), variables_dir["nao_pattern_djf"].keys(), "moimoi", lons, lats, 4, 5, min_val=-5, max_val=5)
-    draw_models(variables_dir["psl_spatialmean_djf"].values(), variables_dir["psl_spatialmean_djf"].keys(), "moimoi2", lons, lats, 4, 5, min_val=980, max_val=1040)
-    draw_models(variables_dir["tas_spatialmean_djf"].values(), variables_dir["tas_spatialmean_djf"].keys(), "moimoi3", lons, lats, 4, 5, min_val=-40, max_val=30)
-    draw_models(variables_dir["pr_spatialmean_djf"].values(), variables_dir["pr_spatialmean_djf"].keys(), "moimoi4", lons, lats, 4, 5, min_val=0, max_val=15)
+    draw_models(variables_dir["nao_pattern_djf"].values(), variables_dir["nao_pattern_djf"].keys(), "testing", lons, lats, 4, 5, min_val=-5, max_val=5)
+    draw_models(variables_dir["psl_spatialmean_djf"].values(), variables_dir["psl_spatialmean_djf"].keys(), "testing2", lons, lats, 4, 5, min_val=980, max_val=1040)
+    draw_models(variables_dir["tas_spatialmean_djf"].values(), variables_dir["tas_spatialmean_djf"].keys(), "testing3", lons, lats, 4, 5, min_val=-40, max_val=30)
+    draw_models(variables_dir["pr_spatialmean_djf"].values(), variables_dir["pr_spatialmean_djf"].keys(), "testing4", lons, lats, 4, 5, min_val=0, max_val=15)
 
 
-# In[43]:
 
-
-### RUN HERE FOR CHANGES IN CELL ABOVE TO FIT NEEDS ###
-
-variables_dir = identify_ensemble_members("piControl")
-
-draw_models(variables_dir["nao_pattern_djf"].values(), variables_dir["nao_pattern_djf"].keys(), "moimoi", lons, lats, 4, 5, min_val=-5, max_val=5)
-#draw_models(variables_dir["psl_spatialmean_djf"].values(), variables_dir["psl_spatialmean_djf"].keys(), "moimoi2", lons, lats, 4, 5, min_val=980, max_val=1040)
-#draw_models(variables_dir["tas_spatialmean_djf"].values(), variables_dir["tas_spatialmean_djf"].keys(), "moimoi3", lons, lats, 4, 5, min_val=-40, max_val=30)
-#draw_models(variables_dir["pr_spatialmean_djf"].values(), variables_dir["pr_spatialmean_djf"].keys(), "moimoi4", lons, lats, 4, 5, min_val=0, max_val=15)
-
-
-# In[324]:
-
-
-draw_models(variables_dir["nao_pattern_djf"].values(), variables_dir["nao_pattern_djf"].keys(), "moimoi", lons, lats, 4, 5, min_val=-5, max_val=5)
-
-
-# In[183]:
-
-
-### ----- draw all models along with their ensemble means ----- ###
+### PLOT ALL MODELS IN CERTAIN EXPERIMENTS ALONG WITH THEIR ENSEMBLE MEANS ###
 
 for exp in experiments:
-    print(exp)
     means_list1 = []
     keys_list = []
     variables_dir = identify_ensemble_members("piControl") # set to exp for all experiments
@@ -436,11 +372,8 @@ for exp in experiments:
     for var in variables_dir:    
         time_period_np = list(variables_dir["nao_pattern_djf"].values())
         time_period_mean = np.nanmean(time_period_np, axis=0)
-        #print(time_period_mean.shape)
         time_period_np.append(time_period_mean)
-        #np.append(time_period_np, [time_period_mean], axis=0)
         keys = list(variables_dir["nao_pattern_djf"].keys())
-        print(keys)
         keys.append("Ensemble Mean")
 
         means_list1.append(time_period_np)
@@ -448,7 +381,8 @@ for exp in experiments:
 
         #break
     #break
-
+    
+    # plot 
     draw_models(means_list1[0], keys_list[0], "nao" + exp, lons, lats, 5, 5, min_val=-5, max_val=5) # nao_pattern
     #draw_models(means_list1[1], keys_list[1], "psl" + exp, lons, lats, 5, 5, min_val=980, max_val=1040)
     #draw_models(means_list1[2], keys_list[2], "tas" + exp, lons, lats, 5, 5, min_val=-40, max_val=30)
@@ -456,10 +390,8 @@ for exp in experiments:
     break
 
 
-# # ONLY ENSEMBLE MEANS OF VARIABLES
-
-# In[9]:
-
+### FUNCTION 4: CALCULATE ENSEMBLE MEANS OF VARIABLES ###
+# adapted from code written by Dr Chris Brierley (@chrisbrierley in the p2fvar_trial repository)
 
 def calculate_means(list_of_numbers):
     n=0
@@ -470,8 +402,8 @@ def calculate_means(list_of_numbers):
     return average
 
 
-# In[10]:
 
+### FUNCTION 5: identify ensemble means for a specific experiment and variable ###
 
 def identify_ensemble_means(exp, variable, specific_exp="all"):
 
@@ -479,15 +411,14 @@ def identify_ensemble_means(exp, variable, specific_exp="all"):
     
     time_dir = {}
     mean_dir = {}
-    # r = root, d = directories, f = files
+     
     for name in exp:
         time_dir[name]=[]
     
     grid_out = xe.util.grid_global(1,1)
     
     for r, d, f in os.walk(path):
-        for file in f:
-                
+        for file in f:             
             pathtofile = os.path.join(r, file)
             if not file.startswith("."):
                 
@@ -523,57 +454,25 @@ def identify_ensemble_means(exp, variable, specific_exp="all"):
     return mean_dir
 
 
-# In[46]:
-
 
 ### PLOT ONLY ENSEMBLE MEANS ### 
 
-# UPDATE
-
-nao_tas_test = identify_ensemble_means(experiments, "nao_tas_regression_djf", "piControl") # add specific experiment if needed, e.g. "piControl"
-
-
-# In[74]:
-
-
+nao_tas_test = identify_ensemble_means(experiments, "nao_tas_regression_djf", "piControl") # add or remove specific experiment if needed, e.g. "piControl"
 draw_models(nao_tas_test.values(), " ", "nao_tas_regression_ens_mean_pi", lons, lats, 1, 1, min_val=-3.5, max_val=3.5)
 
-
-# In[57]:
-
-
-# UPDATE
-
-nao_pr_test = identify_ensemble_means(experiments, "nao_pr_regression_djf", "piControl") # add specific experiment if needed, e.g. "piControl"
-
-
-# In[70]:
-
-
+nao_pr_test = identify_ensemble_means(experiments, "nao_pr_regression_djf", "piControl") # add or remove specific experiment if needed, e.g. "piControl"
 draw_models(nao_pr_test.values(), " ", "nao_pr_regression_ens_mean_pi", lons, lats, 1, 1, min_val=-1.2, max_val=1.2)
 
 
-# In[137]:
 
-
-# FIGURE 1 IN DISCUSSION - UPDATE
-
-# NAO ensemble means in all experiments
+### PLOT THE ENSEMBLE MEANS FOR ALL EXPERIMENTS FOR A SPECIFIC VARIABLE ###
 
 all_means_nao = identify_ensemble_means(experiments, "nao_pattern_djf")
-
-
-# In[144]:
-
-
 
 draw_models(all_means_nao.values(), all_means_nao.keys(), "nao_all_means", lons, lats, 1, 5, min_val=-5, max_val=5)
 
 
-# # ENSEMBLE MEANS FOR CMIP5 AND CMIP6 SEPARATELY
-
-# In[11]:
-
+### FUNCTION 6: ENSEMBLE MEANS FOR CMIP5 AND CMIP6 SEPARATELY ###
 
 def identify_CMIP_ensemble_means(models, variable, name, specific_exp="all"): 
 
@@ -617,9 +516,6 @@ def identify_CMIP_ensemble_means(models, variable, name, specific_exp="all"):
     return mean_dir
 
 
-# In[68]:
-
-
 CMIP6_models = ["AWI-CM", "HADGEM3-GC31", "IPSL-CM6A-LR",
                 "BCC-CSM2-MR", "CNRM-CM6", "CNRM-ESM2", "GISS-E2-1-G",
                 "MIROC6", "MRI-ESM2"]
@@ -633,80 +529,28 @@ CMIP5_average = identify_CMIP_ensemble_means(CMIP5_models, "nao_pattern_djf", "C
 CMIP5_tas = identify_CMIP_ensemble_means(CMIP5_models, "nao_tas_regression_djf", " ", "piControl")
 CMIP5_pr = identify_CMIP_ensemble_means(CMIP5_models, "nao_pr_regression_djf", " ", "piControl")
 
-
-# In[92]:
-
-
 #print(CMIP6_tas["CMIP6_MEAN"].shape)
 draw_models_one(CMIP6_pr.values(), CMIP6_pr.keys(), "CMIP6_pr_average", lons, lats, 1, 1, -1.8, 1.8)
-
-
-# In[94]:
-
 
 #print(CMIP5_average["CMIP5_MEAN"].shape)
 draw_models_one(CMIP5_pr.values(), CMIP5_pr.keys(), "CMIP5_pr_average", lons, lats, 1, 1, -1.8, 1.8)
 
 
-# In[131]:
 
-
-### DIFFERENCES BETWEEN CMIP5 AND CMIP6 ###
-
-#NAO
-NAO_CMIP5 = CMIP5_average["CMIP5 MEAN"]
-NAO_CMIP6 = CMIP6_average["CMIP6 MEAN"]
-CMIP_NAO_DIFF = NAO_CMIP6-NAO_CMIP5
-
-#TAS
-TAS_CMIP5 = CMIP5_tas[" "]
-TAS_CMIP6 = CMIP6_tas[" "]
-CMIP_TAS_DIFF = TAS_CMIP6-TAS_CMIP5
-
-#PR
-PR_CMIP5 = CMIP5_pr[" "]
-PR_CMIP6 = CMIP6_pr[" "]
-CMIP_PR_DIFF = PR_CMIP6-PR_CMIP5
-
-
-draw_models_one([CMIP_NAO_DIFF], [" "], "CMIP6-CMIP5_NAO", lons, lats, 1,1,-1.2,1.2)
-#draw_models_one([CMIP_TAS_DIFF], [" "], "CMIP6-CMIP5_TAS", lons, lats, 1,1,-0.5,0.5)
-#draw_models_one([CMIP_PR_DIFF], [" "], "CMIP6-CMIP5_PR", lons, lats, 1,1,-0.5,0.5)
-
-
-# # all models regression
-
-# In[86]:
-
-
-### UPDATE IF NEEDED (APPENDIX?) ###
-lats= np.arange(-90,90,1)
-lons= np.arange(-180,180,1)
-
-#var_dir["nao_pr_regression_djf"]
-
-for a in experiments:
-    print(a)
-    variables_dir = identify_ensemble_members(a, False)
-    draw_models(variables_dir["nao_pr_regression_djf"].values(), variables_dir["nao_pr_regression_djf"].keys(), "moimoi3", lons, lats, 5, 5)
-    draw_models(variables_dir["nao_tas_regression_djf"].values(), variables_dir["nao_tas_regression_djf"].keys(), "moimoi4", lons, lats, 5, 5)
-
-
-# # identify difference field between ensemble members
-
-# In[12]:
+### FUNCTION 7: identify difference field between ensemble members ###
 
 
 def identify_ensemble_difference_field(experiments, not_regression=True):
 
     path = "/Users/venniarra/Desktop/jupyter-notebook/test2"
     
+    # list
     variables = ["nao_pattern_djf", "psl_spatialmean_djf", "tas_spatialmean_djf", "pr_spatialmean_djf", "nao_tas_regression_djf", "nao_pr_regression_djf"]
     #models = ["AWI-CM", "HADGEM3-G", "IPSL-CM6A-LR", "BCC-CSM2-MR", "CNRM-CM6", "CNRM-ESM2", "GISS-E2-1-G", "MIROC6", "MRI-ESM2","CCSM4","COSMOS-ASO","CSIRO-Mk3L","EC-EARTH-2-2", "FGOALS-g2","MRI-CGCM3","MIROC-ESM","GISS-E2-R","CNRM-CM5","MPI-ESM-P"]
     models2 = []
     
+    #dictionaries
     var_dir = {}
-    # r = root, d = directories, f = files
     nao= {}
     psl= {}
     pr= {}
@@ -717,10 +561,10 @@ def identify_ensemble_difference_field(experiments, not_regression=True):
     exp_dir = {}
     result_dir = {}
     
+    # 1x1 grid for regridding
     grid_out = xe.util.grid_global(1,1)
     
     for exp in experiments:
-        
         for r, d, f in os.walk(path):
             for file in f:
                 if exp in file:
@@ -825,13 +669,8 @@ def identify_ensemble_difference_field(experiments, not_regression=True):
     return result_dir
 
 
-# In[82]:
-
-
 regrid_diff = identify_ensemble_difference_field(experiments)
 
-
-# In[135]:
 
 
 ### difference fields with ensemble means ###
@@ -855,11 +694,9 @@ for timeperiod in regrid_diff.keys():
                 keys.append(variable+"_mean")
                 draw_models(time_period_np, keys, "regrid_diff_and_ensemble", lons, lats, 4, 5, -10, 10)
 
-
-# # specific difference
-
-# In[25]:
-
+                      
+                      
+### FUNCTION 8: identify specific difference field ###
 
 def identify_ensemble_difference_field_specific(experiment, variable):
 
@@ -871,10 +708,10 @@ def identify_ensemble_difference_field_specific(experiment, variable):
     
     var_dir = {}
     exp_dir = {}
-    # r = root, d = directories, f = files
     nao= {}
     pi = {}
     
+    #1x1 grid for regridding
     grid_out = xe.util.grid_global(1,1)
     
     for r, d, f in os.walk(path):
@@ -899,10 +736,8 @@ def identify_ensemble_difference_field_specific(experiment, variable):
 
                 model_name = pathtofile[:index]
 
-
                 if model_name not in models2:
                     models2.append(model_name)
-
 
                 temp = open_file.variables.get(variable)
                 if temp is not None:
@@ -963,8 +798,6 @@ def identify_ensemble_difference_field_specific(experiment, variable):
     return diff_dir
 
 
-# In[22]:
-
 
 variables = ["nao_pattern_djf", "psl_spatialmean_djf", "tas_spatialmean_djf", "pr_spatialmean_djf", "nao_tas_regression_djf", "nao_pr_regression_djf"]
 array = [1,2]
@@ -990,14 +823,11 @@ for var in variables:
             time_period_np.append(average)
             keys = list(diff_lig_nao_new.keys())
             keys.append(var+"_mean")
-            #draw_models(time_period_np, keys, "regrid_diff_and_ensemble", lons, lats, 4, 5, array[i], array[i+1])
+            draw_models(time_period_np, keys, "regrid_diff_and_ensemble", lons, lats, 4, 5, array[i], array[i+1])
             i=i+1
 
 
-# # ensemble mean differences
-
-# In[146]:
-
+### FUNCTION 9: ensemble mean differences ###
 
 def ensemble_difference_mean(var, experiments):
     
@@ -1014,7 +844,6 @@ def ensemble_difference_mean(var, experiments):
             for model in differences.keys():
 
                 if len(list(differences[model])) != 0:
-                    #print(diff_lig_nao[model])
                     average=(n*average+differences[model])/(n+1)
                     n=n+1
             
@@ -1023,10 +852,7 @@ def ensemble_difference_mean(var, experiments):
     return exp_mean_dir
 
 
-# # ENS MEAN FOR ALL VARIABLES FOR THE DISCUSSION # UPDATE # PERSE
-
-# In[ ]:
-
+### ENSEMBLE MEAN DIFFERENCES FOR ALL VARIABLES ###
 
 # NAO
 
@@ -1036,10 +862,6 @@ nao_pattern_lgm = ensemble_difference_mean("nao_pattern_djf", ["lgm"])
 nao_pattern_mh = ensemble_difference_mean("nao_pattern_djf", ["midHolocene"]) 
 nao_pattern_1pct = ensemble_difference_mean("nao_pattern_djf", ["1pctCO2"]) 
 
-
-# In[ ]:
-
-
 # TAS REGRESSION
 
 tas_pattern_difference = ensemble_difference_mean("nao_tas_regression_djf", experiments)
@@ -1047,10 +869,6 @@ tas_pattern_lig = ensemble_difference_mean("nao_tas_regression_djf", ["lig127k"]
 tas_pattern_lgm = ensemble_difference_mean("nao_tas_regression_djf", ["lgm"])
 tas_pattern_mh = ensemble_difference_mean("nao_tas_regression_djf", ["midHolocene"])
 tas_pattern_1pct = ensemble_difference_mean("nao_tas_regression_djf", ["1pctCO2"])
-
-
-# In[ ]:
-
 
 # PR REGRESSION
 
@@ -1060,22 +878,12 @@ pr_pattern_lgm = ensemble_difference_mean("nao_pr_regression_djf", ["lgm"])
 pr_pattern_mh = ensemble_difference_mean("nao_pr_regression_djf", ["midHolocene"]) 
 pr_pattern_1pct = ensemble_difference_mean("nao_pr_regression_djf", ["1pctCO2"]) 
 
-
-# In[214]:
-
-
-# UPDATE-here - DO NOT RUN AGAIN IF NOT NECESSARY-TAKES AGES!! - MEAN STATE CLIMATOLOGY PLOTS - TAS, PR, PSL
-
 #TAS
 tas_mean_difference = ensemble_difference_mean("tas_spatialmean_djf", experiments)
 tas_mean_diff_lig = ensemble_difference_mean("tas_spatialmean_djf", ["lig127k"])
 tas_mean_diff_lgm = ensemble_difference_mean("tas_spatialmean_djf", ["lgm"])
 tas_mean_diff_mh = ensemble_difference_mean("tas_spatialmean_djf", ["midHolocene"])
 tas_mean_diff_1pct = ensemble_difference_mean("tas_spatialmean_djf", ["1pctCO2"])
-
-
-# In[265]:
-
 
 #PR
 pr_mean_difference = ensemble_difference_mean("pr_spatialmean_djf", experiments)
@@ -1084,10 +892,6 @@ pr_mean_diff_lgm = ensemble_difference_mean("pr_spatialmean_djf", ["lgm"])
 pr_mean_diff_mh = ensemble_difference_mean("pr_spatialmean_djf", ["midHolocene"])
 pr_mean_diff_1pct = ensemble_difference_mean("pr_spatialmean_djf", ["1pctCO2"])
 
-
-# In[276]:
-
-
 #PSL
 psl_mean_difference = ensemble_difference_mean("psl_spatialmean_djf", experiments)
 psl_mean_diff_lig = ensemble_difference_mean("psl_spatialmean_djf", ["lig127k"])
@@ -1095,30 +899,26 @@ psl_mean_diff_lgm = ensemble_difference_mean("psl_spatialmean_djf", ["lgm"])
 psl_mean_diff_mh = ensemble_difference_mean("psl_spatialmean_djf", ["midHolocene"])
 psl_mean_diff_1pct = ensemble_difference_mean("psl_spatialmean_djf", ["1pctCO2"])
 
+### PLOT MEAN STATE CLIMATOLOGY ###
 
-# In[294]:
-
-
-# DRAW MEAN STATE CLIMATOLOGY
-
-# NAO 
-#draw_models(nao_pattern_difference.values(), nao_pattern_difference.keys(), "tas_diff_mean", lons, lats, 1,4,-11.7,11.7)
+#NAO 
+draw_models(nao_pattern_difference.values(), nao_pattern_difference.keys(), "tas_diff_mean", lons, lats, 1,4,-11.7,11.7)
 #draw_models_one(nao_pattern_lig.values(), nao_pattern_lig.keys(), "nao_diff_mean_lig", lons, lats, 1,1,-5.7,5.7)
 #draw_models_one(nao_pattern_lgm.values(), nao_pattern_lgm.keys(), "nao_diff_mean_lgm", lons, lats, 1,1,-34.7,34.7)
 #draw_models_one(nao_pattern_mh.values(), nao_pattern_mh.keys(), "nao_diff_mean_mh", lons, lats, 1,1,-5.7,5.7)
 #draw_models_one(nao_pattern_1pct.values(), nao_pattern_1pct.keys(), "nao_diff_mean_1pct", lons, lats, 1,1,-14.7,14.7)
 
 
-# TAS REGRESSION
-#draw_models(tas_pattern_difference.values(), tas_pattern_difference.keys(), "tas_diff_mean", lons, lats, 1,4,-11.7,11.7)
+#TAS REGRESSION
+draw_models(tas_pattern_difference.values(), tas_pattern_difference.keys(), "tas_diff_mean", lons, lats, 1,4,-11.7,11.7)
 #draw_models_one(tas_pattern_lig.values(), tas_pattern_lig.keys(), "tas_re_diff_mean_lig", lons, lats, 1,1,-5.7,5.7)
 #draw_models_one(tas_pattern_lgm.values(), tas_pattern_lgm.keys(), "tas_re_diff_mean_lgm", lons, lats, 1,1,-34.7,34.7)
 #draw_models_one(tas_pattern_mh.values(), tas_pattern_mh.keys(), "tas_re_diff_mean_mh", lons, lats, 1,1,-5.7,5.7)
 #draw_models_one(tas_pattern_1pct.values(), tas_pattern_1pct.keys(), "tas_re_diff_mean_1pct", lons, lats, 1,1,-14.7,14.7)
 
 
-# PR REGRESSION
-#draw_models(pr_pattern_difference.values(), tas_mean_difference.keys(), "tas_diff_mean", lons, lats, 1,4,-11.7,11.7)
+#PR REGRESSION
+draw_models(pr_pattern_difference.values(), tas_mean_difference.keys(), "tas_diff_mean", lons, lats, 1,4,-11.7,11.7)
 #draw_models_one(pr_pattern_lig.values(), pr_pattern_lig.keys(), "pr_re_diff_mean_lig", lons, lats, 1,1,-5.7,5.7)
 #draw_models_one(pr_pattern_lgm.values(), pr_pattern_lgm.keys(), "pr_re_diff_mean_lgm", lons, lats, 1,1,-34.7,34.7)
 #draw_models_one(pr_pattern_mh.values(), pr_pattern_mh.keys(), "pr_re_diff_mean_mh", lons, lats, 1,1,-5.7,5.7)
@@ -1126,60 +926,45 @@ psl_mean_diff_1pct = ensemble_difference_mean("psl_spatialmean_djf", ["1pctCO2"]
 
 
 
-# TAS (keep coordinates for these, letters: a,d,g,j, color: bwr, %0f) 
-#draw_models(tas_mean_difference.values(), tas_mean_difference.keys(), "tas_diff_mean", lons, lats, 1,4,-11.7,11.7)
+#TAS (keep coordinates for these, letters: a,d,g,j, color: bwr, %0f) 
+draw_models(tas_mean_difference.values(), tas_mean_difference.keys(), "tas_diff_mean", lons, lats, 1,4,-11.7,11.7)
 #draw_models_one(tas_mean_diff_lig.values(), tas_mean_diff_lig.keys(), "tas_diff_mean_lig", lons, lats, 1,1,-5.7,5.7)
 #draw_models_one(tas_mean_diff_lgm.values(), tas_mean_diff_lgm.keys(), "tas_diff_mean_lgm", lons, lats, 1,1,-34.7,34.7)
 #draw_models_one(tas_mean_diff_mh.values(), tas_mean_diff_mh.keys(), "tas_diff_mean_mh", lons, lats, 1,1,-5.7,5.7)
 #draw_models_one(tas_mean_diff_1pct.values(), tas_mean_diff_1pct.keys(), "tas_diff_mean_1pct", lons, lats, 1,1,-14.7,14.7)
 
 
-# PR (no coordinates, letters: b,e,h,k, color:, %1f)
-#draw_models(pr_mean_difference.values(), pr_mean_difference.keys(), "pr_diff_mean", lons, lats, 1,4,-2,2)
+#PR (no coordinates, letters: b,e,h,k, color:, %1f)
+draw_models(pr_mean_difference.values(), pr_mean_difference.keys(), "pr_diff_mean", lons, lats, 1,4,-2,2)
 #draw_models_one(pr_mean_diff_lig.values(), pr_mean_diff_lig.keys(), "pr_diff_mean_lig", lons, lats, 1,1,-2,2)
 #draw_models_one(pr_mean_diff_lgm.values(), pr_mean_diff_lgm.keys(), "pr_diff_mean_lgm", lons, lats, 1,1,-2,2)
 #draw_models_one(pr_mean_diff_mh.values(), pr_mean_diff_mh.keys(), "pr_diff_mean_mh", lons, lats, 1,1,-2,2)
 #draw_models_one(pr_mean_diff_1pct.values(), pr_mean_diff_1pct.keys(), "pr_diff_mean_1pct", lons, lats, 1,1,-2,2)
 
-# PSL (no coorfinates, letters: c,f,i,l, color, %0f)
-#draw_models(psl_mean_difference.values(), psl_mean_difference.keys(), "psl_diff_mean", lons, lats, 1,4,-15,15)
+#PSL (no coorfinates, letters: c,f,i,l, color, %0f)
+draw_models(psl_mean_difference.values(), psl_mean_difference.keys(), "psl_diff_mean", lons, lats, 1,4,-15,15)
 #draw_models_one(psl_mean_diff_lig.values(), psl_mean_diff_lig.keys(), "psl_diff_mean_lig", lons, lats, 1,1,-5.8,5.8)
 #draw_models_one(psl_mean_diff_lgm.values(), psl_mean_diff_lgm.keys(), "psl_diff_mean_lgm", lons, lats, 1,1,-35,35)
 #draw_models_one(psl_mean_diff_mh.values(), psl_mean_diff_mh.keys(), "psl_diff_mean_mh", lons, lats, 1,1,-5.8,5.8)
 draw_models_one(psl_mean_diff_1pct.values(), psl_mean_diff_1pct.keys(), "psl_diff_mean_1pct", lons, lats, 1,1,-5.8,5.8)
 
 
-# # DIFFERENCE OF ALL EXPERIMENTS
-
-# In[38]:
-
+### DIFFERENCE FIELDS OF ALL EXPERIMENTS ###
 
 # LIG
 diff_lig_nao = identify_ensemble_difference_field_specific("lig127", "nao_pattern_djf")
 diff_lig_tas_nao = identify_ensemble_difference_field_specific("lig127", "nao_tas_regression_djf")
 diff_lig_pr_nao = identify_ensemble_difference_field_specific("lig127", "nao_pr_regression_djf")
 
-
-# In[57]:
-
-
 # LGM
 diff_lgm_nao = identify_ensemble_difference_field_specific("lgm", "nao_pattern_djf")
 diff_lgm_tas_nao = identify_ensemble_difference_field_specific("lgm", "nao_tas_regression_djf")
 diff_lgm_pr_nao = identify_ensemble_difference_field_specific("lgm", "nao_pr_regression_djf")
 
-
-# In[27]:
-
-
 #MH
 diff_mh_nao = identify_ensemble_difference_field_specific("midHolocene", "nao_pattern_djf")
 diff_mh_tas_nao = identify_ensemble_difference_field_specific("midHolocene", "nao_tas_regression_djf")
 diff_mh_pr_nao = identify_ensemble_difference_field_specific("midHolocene", "nao_pr_regression_djf")
-
-
-# In[38]:
-
 
 #1PCT
 diff_1pct_nao = identify_ensemble_difference_field_specific("1pctCO2", "nao_pattern_djf")
@@ -1187,18 +972,9 @@ diff_1pct_tas_nao = identify_ensemble_difference_field_specific("1pctCO2", "nao_
 diff_1pct_pr_nao = identify_ensemble_difference_field_specific("1pctCO2", "nao_pr_regression_djf")
 
 
-# # LIG127K
 
-# In[105]:
+### DIFFERENCE LIG127K ###
 
-
-list_lig = ["HadGEM3", "IPSL-CM6A", "AWI-CM", "Ensemble Mean"]
-
-
-# In[42]:
-
-
-### DIFF_LIG_NAO ###
 n=0
 average=0
 
@@ -1207,66 +983,51 @@ list_lig = ["HadGEM3", "IPSL-CM6A", "AWI-CM", "Ensemble Mean"]
 for model in diff_lig_nao.keys():
     
     if len(list(diff_lig_nao[model])) != 0:
-        #print(diff_lig_nao[model])
         average=(n*average+diff_lig_nao[model])/(n+1)
         n=n+1
         
 time_period_np = list(diff_lig_nao.values())
-#time_period_mean = np.nanmean(time_period_np, axis=0)
 time_period_np.append(average)
 keys = list(diff_lig_nao.keys())
 keys.append("Ensemble Mean")
 draw_models(time_period_np, list_lig, "lig127k_regrid_diff_and_ensemble", lons, lats, 1, 4, -2, 2)
 
 
-# In[111]:
-
-
-### DIFF_LIG_TAS_NAO ###
+### DIFFERENCE LIG_TAS_NAO ###
 n=0
 average=0
 
 for model in diff_lig_tas_nao.keys():
     
     if len(list(diff_lig_tas_nao[model])) != 0:
-        #print(diff_lig_nao[model])
         average=(n*average+diff_lig_tas_nao[model])/(n+1)
         n=n+1
         
 time_period_np = list(diff_lig_tas_nao.values())
-#time_period_mean = np.nanmean(time_period_np, axis=0)
 time_period_np.append(average)
 keys = list(diff_lig_tas_nao.keys())
 keys.append("nao_pattern_djf"+"_mean")
 draw_models(time_period_np, list_lig, "lig127k_nao_tas_diff_and_ensemble", lons, lats, 1, 4, -1, 1)
 
 
-# In[109]:
-
-
-### DIFF_LIG_PR_NAO ###
+### DIFFERENCE LIG_PR_NAO ###
 n=0
 average=0
 
 for model in diff_lig_pr_nao.keys():
     
     if len(list(diff_lig_pr_nao[model])) != 0:
-        #print(diff_lig_nao[model])
         average=(n*average+diff_lig_pr_nao[model])/(n+1)
         n=n+1
         
 time_period_np = list(diff_lig_pr_nao.values())
-#time_period_mean = np.nanmean(time_period_np, axis=0)
 time_period_np.append(average)
 keys = list(diff_lig_pr_nao.keys())
 keys.append("nao_pattern_djf"+"_mean")
 draw_models(time_period_np, list_lig, "lig127k_nao_pr_diff_and_ensemble", lons, lats, 1, 4, -0.5, 0.5)
 
 
-# # LGM
-
-# In[78]:
-
+### LGM ###
 
 n=0
 average=0
@@ -1276,66 +1037,52 @@ list_lgm = ["AWI-CM", "GISS-E2-R", "MIROC-ESM", "COSMOS", "FGOALS-g2", "MPI-ESM-
 for model in diff_lgm_nao.keys():
     
     if len(list(diff_lgm_nao[model])) != 0:
-        #print(diff_lig_nao[model])
         average=(n*average+diff_lgm_nao[model])/(n+1)
         n=n+1
         
 time_period_np = list(diff_lgm_nao.values())
-#time_period_mean = np.nanmean(time_period_np, axis=0)
 time_period_np.append(average)
 keys = list(diff_lgm_nao.keys())
 keys.append("Ensemble Mean")
 draw_models(time_period_np, list_lgm, "lgm_regrid_diff_and_ensemble", lons, lats, 3, 4, -5.8, 5.8)
 
 
-# In[123]:
-
-
-### DIFF_LGM_TAS_NAO ### CHANGE BACK TO ORIGINAL
+### DIFFERENCE LGM_TAS_NAO ###
 n=0
 average=0
 
 for model in diff_lgm_tas_nao.keys():
     
     if len(list(diff_lgm_tas_nao[model])) != 0:
-        #print(diff_lig_nao[model])
         average=(n*average+diff_lgm_tas_nao[model])/(n+1)
         n=n+1
         
 time_period_np = list(diff_lgm_tas_nao.values())
-#time_period_mean = np.nanmean(time_period_np, axis=0)
 time_period_np.append(average)
 keys = list(diff_lgm_tas_nao.keys())
 keys.append("Ensemble Mean")
 draw_models(time_period_np, list_lgm, "lgm_nao_tas_diff_and_ensemble", lons, lats, 3, 4, -3, 3)
 
 
-# In[103]:
 
-
-### DIFF_LGM_PR_NAO ###
+### DIFFERENCE LGM_PR_NAO ###
 n=0
 average=0
 
 for model in diff_lgm_pr_nao.keys():
     
     if len(list(diff_lgm_pr_nao[model])) != 0:
-        #print(diff_lig_nao[model])
         average=(n*average+diff_lgm_pr_nao[model])/(n+1)
         n=n+1
         
 time_period_np = list(diff_lgm_pr_nao.values())
-#time_period_mean = np.nanmean(time_period_np, axis=0)
 time_period_np.append(average)
 keys = list(diff_lgm_pr_nao.keys())
 keys.append("nao_pattern_djf"+"_mean")
 draw_models(time_period_np, list_lgm, "lgm_nao_pr_diff_and_ensemble", lons, lats, 3, 4, -1.2, 1.2)
 
 
-# # MIDHOLOCENE
-
-# In[28]:
-
+### MIDHOLOCENE ###
 
 n=0
 average=0
@@ -1349,21 +1096,17 @@ list_midHolocene = ["IPSL-CM5A","IPSL-CM6A",
 for model in diff_mh_nao.keys():
     
     if len(list(diff_mh_nao[model])) != 0:
-        #print(diff_lig_nao[model])
         average=(n*average+diff_mh_nao[model])/(n+1)
         n=n+1
         
 time_period_np = list(diff_mh_nao.values())
-#time_period_mean = np.nanmean(time_period_np, axis=0)
 time_period_np.append(average)
 keys = list(diff_mh_nao.keys())
 keys.append("Ensemble Mean")
 print(keys)
 draw_models(time_period_np, keys, "mh_regrid_diff_and_ensemble", lons, lats, 4, 4, -2, 2)
 
-
-# In[31]:
-
+### DIFFERENCE MH_TAS_NAO ###
 
 n=0
 average=0
@@ -1383,8 +1126,7 @@ keys.append("Ensemble Mean")
 draw_models(time_period_np, keys, "mh_nao_tas_diff_and_ensemble", lons, lats, 4, 4, -1, 1)
 
 
-# In[37]:
-
+### DIFFERENCE MH_PR_NAO ###
 
 n=0
 average=0
@@ -1392,22 +1134,17 @@ average=0
 for model in diff_mh_pr_nao.keys():
     
     if len(list(diff_mh_pr_nao[model])) != 0:
-        #print(diff_lig_nao[model])
         average=(n*average+diff_mh_pr_nao[model])/(n+1)
         n=n+1
         
 time_period_np = list(diff_mh_pr_nao.values())
-#time_period_mean = np.nanmean(time_period_np, axis=0)
 time_period_np.append(average)
 keys = list(diff_mh_pr_nao.keys())
 keys.append("Ensemble Mean")
 draw_models(time_period_np, keys, "mh_nao_pr_diff_and_ensemble", lons, lats, 4, 4, -0.5, 0.5)
 
 
-# ## 1PCTCO2
-
-# In[47]:
-
+### 1PCTCO2 ###
 
 n=0
 average=0
@@ -1415,68 +1152,55 @@ average=0
 for model in diff_1pct_nao.keys():
     
     if len(list(diff_1pct_nao[model])) != 0:
-        #print(diff_lig_nao[model])
         average=(n*average+diff_1pct_nao[model])/(n+1)
         n=n+1
         
 time_period_np = list(diff_1pct_nao.values())
-#time_period_mean = np.nanmean(time_period_np, axis=0)
 time_period_np.append(average)
 keys = list(diff_1pct_nao.keys())
 keys.append("Ensemble Mean")
 draw_models(time_period_np, keys, "1pct_regrid_diff_and_ensemble", lons, lats, 4, 5, -2, 2)
 
 
-# In[45]:
 
-
-# 1PCT NAO TAS DIFF #
+### DIFFERENCE 1PCT_TAS_NAO ###
 n=0
 average=0
 
 for model in diff_1pct_tas_nao.keys():
     
     if len(list(diff_1pct_tas_nao[model])) != 0:
-        #print(diff_lig_nao[model])
         average=(n*average+diff_1pct_tas_nao[model])/(n+1)
         n=n+1
         
 time_period_np = list(diff_1pct_tas_nao.values())
-#time_period_mean = np.nanmean(time_period_np, axis=0)
 time_period_np.append(average)
 keys = list(diff_1pct_tas_nao.keys())
 keys.append("Ensemble Mean")
 draw_models(time_period_np, keys, "1pct_nao_tas_diff_and_ensemble", lons, lats, 4, 5, -2, 2)
 
 
-# In[43]:
 
-
-# 1PCT NAO PR DIFF #
+### DIFFERENCE 1PCT_PR_NAO ###
 n=0
 average=0
 
 for model in diff_1pct_pr_nao.keys():
     
     if len(list(diff_1pct_pr_nao[model])) != 0:
-        #print(diff_lig_nao[model])
         average=(n*average+diff_1pct_pr_nao[model])/(n+1)
         n=n+1
         
 time_period_np = list(diff_1pct_pr_nao.values())
-#time_period_mean = np.nanmean(time_period_np, axis=0)
 time_period_np.append(average)
 keys = list(diff_1pct_pr_nao.keys())
 keys.append("Ensemble Mean")
 draw_models(time_period_np, keys, "1pct_nao_pr_diff_and_ensemble", lons, lats, 4, 5, -0.5, 0.5)
 
 
-# # all ensembles difference fields in each experiment together
+### FUNCTION 10: all ensembles difference fields in each experiment together ###
 
-# In[104]:
-
-
-"""identify difference field for ensemble members"""
+#identify difference field for ensemble members
 
 def identify_ensemble_difference_field(means, keys):
     print(keys.index('piControl'))
@@ -1494,9 +1218,6 @@ def identify_ensemble_difference_field(means, keys):
     return ens_difference
 
 
-# In[128]:
-
-
 nao = []
 psl = []
 tas = []
@@ -1508,7 +1229,6 @@ for a in experiments:
 
     ensembles_means = []
     
-
     for time_period in variables_dir:
         
         time_period_np = np.array(list(variables_dir[time_period].values()))
@@ -1532,10 +1252,10 @@ draw_models(a[2], experiments, "tas_all", lons, lats, 1, 4, min_val=-15, max_val
 draw_models(a[3], experiments, "pr_all", lons, lats, 1, 4, min_val=-2,max_val=2)
 
 
+
+### AMPLITUDE CHANGE ###
+
 # standard deviations for each nao_pattern in each model and each experiment - then, ensemble mean of all the std together
-
-# In[228]:
-
 
 for exp in experiments:
     print(exp)
@@ -1543,22 +1263,11 @@ for exp in experiments:
     
     for mod in variables_dir["nao_pattern_djf"].keys():
         print("\t",mod)
-        nao = variables_dir["nao_pattern_djf"][mod][9:69,90:220] #[110:170,90:220]
+        nao = variables_dir["nao_pattern_djf"][mod][9:69,90:220] #[110:170,90:220] # change region accordingly
         std = np.nanstd(nao)
         print("\t",std)
 
-
-# In[231]:
-
-
 variables_dir["nao_pattern_djf"]
-
-
-# In[9]:
-
-
-# ftp://wxmaps.org/pub/straus/CLIM_753/EOF.pdf
-# https://www.nature.com/articles/nature12580#online-methods
 
 for exp in experiments:
     print(exp)
@@ -1567,7 +1276,7 @@ for exp in experiments:
     
     for mod, mod2 in zip(variables_dir["nao_pattern_djf"].keys(),timeseries_dir["nao_timeseries_djf"].keys()):   # the leading spatial pattern is standardized by its respective spatial standard deviation
         print("\t",mod)
-        nao = variables_dir["nao_pattern_djf"][mod][9:69,90:220] #[110:170,90:220] - remember changing this depending on the reverse_data
+        nao = variables_dir["nao_pattern_djf"][mod][9:69,90:220]
         nao_time = timeseries_dir["nao_timeseries_djf"][mod2]
         nao_std = np.nanstd(nao)
         nao_mean = np.nanmean(nao)
@@ -1577,11 +1286,9 @@ for exp in experiments:
         print("\t",mod2)
         print("\t",std_nao_time)
 
-
-# # make your own scatter plots
-
-# In[83]:
-
+           
+           
+### FUNCTION 11: ###
 
 def identify_model_name():
 
@@ -1607,16 +1314,12 @@ def identify_model_name():
     
     return models2
 
-
-# In[84]:
-
-
 modelss = identify_model_name()
 print(modelss)
 
 
-# In[149]:
 
+### SCATTER PLOTS ###
 
 def scatter_plots(experiments, var):
     
@@ -1678,7 +1381,6 @@ def scatter_plots(experiments, var):
     y_dict = {}
     x_dict = {}
     exp_dict = {}
-
     
     for exp in experiments:
         exp_dict[exp] = []
@@ -1716,22 +1418,22 @@ def scatter_plots(experiments, var):
         
                 if item == "tas_spatialmean_djf":
                     pi_grid = regridder(models_times_dict[model]["piControl"].variables.get(item).values)
-                    x_tas_neu=(np.nanmean(new_grid[19:39,170:215] - pi_grid[19:39,170:215]))
+                    x_tas_neu=(np.nanmean(new_grid[19:39,170:215] - pi_grid[19:39,170:215])) # NORTHERN EUROPE
                     print(x_axis_tas_neu.keys())
                     x_axis_tas_neu[exp].append(x_tas_neu)
                 
                 if item == "pr_spatialmean_djf":
                     pi_grid = regridder(models_times_dict[model]["piControl"].variables.get(item).values)
-                    x_pr_neu=(np.nanmean(new_grid[19:39,170:215] - pi_grid[19:39,170:215]))
+                    x_pr_neu=(np.nanmean(new_grid[19:39,170:215] - pi_grid[19:39,170:215])) #  NORTHERN EUROPE
                     x_axis_pr_neu[exp].append(x_pr_neu)
                     
                 if item == "tas_spatialmean_djf":
                     pi_grid = regridder(models_times_dict[model]["piControl"].variables.get(item).values)
-                    x_tas_med=(np.nanmean(new_grid[39:59,170:215] - pi_grid[39:59,170:215]))
+                    x_tas_med=(np.nanmean(new_grid[39:59,170:215] - pi_grid[39:59,170:215])) # SOUTHERN EUROPE
                     x_axis_tas_med[exp].append(x_tas_med)
                 if item == "pr_spatialmean_djf":
                     pi_grid = regridder(models_times_dict[model]["piControl"].variables.get(item).values)
-                    x_pr_med=(np.nanmean(new_grid[39:59,170:215] - pi_grid[39:59,170:215]))
+                    x_pr_med=(np.nanmean(new_grid[39:59,170:215] - pi_grid[39:59,170:215])) # SOUTHERN EUROPE
                     x_axis_pr_med[exp].append(x_pr_med)
             
             exp_dict[exp].append(std_nao_time)
@@ -1741,27 +1443,14 @@ def scatter_plots(experiments, var):
    
    
     return x_axis
-    
-
-
-# In[ ]:
 
 
 a=scatter_plots(experiments, "nao_pattern_djf")
 
 
-# In[ ]:
 
-
-print(a[0].keys())
-
-
-# In[145]:
-
-
-# then make scatter plot with values from above
-
-#make function (changing x-axis values)
+### make scatter plot with values from above ###
+# code below adapted from Dr Chris Brierley ("chrisbrierley)
 
 colors = ['black','darkgreen','blue','lime','darkgreen','blue','lime','red','maroon','goldenrod','darkorange']
 markers = ['o','o','o','o','o','o','o','o','o','o','o']
@@ -1775,80 +1464,10 @@ for b in a[0].keys():
         plt.legend(loc='best')
         i=i+1
 
-
-# In[ ]:
-
-
 for b in range(len(a)):
     plt.scatter(a[b],a[-1], color=colors[b], marker=markers[b], label="a")
     plt.xlabel("neu_tas")
     plt.ylabel("nao_amplitude")
     plt.legend(loc='best')
 
-
-# In[51]:
-
-
 hello = scatter_plots(experiments, "nao_pattern_djf")
-
-
-# In[ ]:
-
-
-##  SCATTERS ##
-
-# Dictionary for values above - amplitude values for each model in each time period
-# Take experiment amplitude minus pi amplotude for each model and put these difference values into a DIFF dictionary
-
-# Take average TAS/PR djf over three boxes in the north atlantic (NEU,SEU,MED) and make a dictionary with average values
-# for TAS and PR for each model in each time period.
-# Take time period value minus pi value for each model and put these difference values into a DIFF dictionary
-
-# MAKE SCATTER PLOT WITH amplitude change in x-axis and TAS/PR change in y-axis
-
-
-# In[55]:
-
-
-# amplitude for 20C
-
-#import file
-C20 = xr.open_dataset('test2/C20-Reanalysis.cvdp_data.1871-2012_corr2.nc', decode_times=False)
-
-# select variable
-C20_nao_patternn = C20.variables["nao_pattern_djf"][::-1,:]
-C20_nao_time = C20.variables["nao_timeseries_djf"][:]
-
-# regrid
-grid_out = xe.util.grid_global(1,1)
-
-# create grid
-regridder_M1 = xe.Regridder(C20, grid_out, 'nearest_s2d', reuse_weights=False)
-
-# use new grid
-C20_nao_10 = regridder_M1(C20_nao_patternn.values)[:] # [9:69,90:220]
-
-#plt.imshow(C20_nao_10)
-
-# std of pattern
-
-C20_nao_std = np.nanstd(C20_nao_10)
-C20_nao_mean = np.nanmean(C20_nao_10)
-New_C20_nao = (C20_nao_10-C20_nao_mean)/C20_nao_std
-new_C20_time = C20_nao_time*C20_nao_std
-std_C20_time = np.nanstd(new_C20_time)
-
-#print(std_C20_time)
-draw_models_one([C20_nao_10], [" "], "DELETE", lons, lats, 1, 1, -5,5)
-
-
-# In[230]:
-
-
-timeseries_dir["nao_timeseries_djf"]
-#nao_time = timeseries_dir["nao_timeseries_djf"][mod]
-#print(nao_time)
-
-
-
-
